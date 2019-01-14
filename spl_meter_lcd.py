@@ -33,6 +33,9 @@ RATE = RATES[1]
 
 NUMERATOR, DENOMINATOR = spl.A_weighting(RATE)
 
+SND_SAMPLES = list()
+LED_THRESHOLD = 70  # 70 dB threshold
+
 def get_path(base, tail, head=''):
     return os.path.join(base, tail) if head == '' else get_path(head, get_path(base, tail)[1:])
 
@@ -81,6 +84,12 @@ def update_max_if_new_is_larger_than_max(new, max):
     else:
         return max
 
+def addSoundSample(new):
+    if (len(SND_SAMPLES) > 300):
+        SND_SAMPLES.pop(0)
+    SND_SAMPLES.append(new)
+    return max(SND_SAMPLES)
+
 
 def listen(old=0, error_count=0, min_decibel=100, max_decibel=0, prev_led_max=0):
     global lcd
@@ -109,14 +118,15 @@ def listen(old=0, error_count=0, min_decibel=100, max_decibel=0, prev_led_max=0)
                 print('A-weighted: {:+.2f} dB'.format(new_decibel))
                 
                 #update_text(SINGLE_DECIBEL_FILE_PATH, '{:.2f} dBA'.format(new_decibel))
-                max_decibel = update_max_if_new_is_larger_than_max(new_decibel, max_decibel)
+                #max_decibel = update_max_if_new_is_larger_than_max(new_decibel, max_decibel)
+                max_decibel = addSoundSample(new_decibel)
                 lcd.clear()
                 lcd.message('Max    New:\n{:+.2f}'.format(max_decibel) + ' {:+.2f} dB'.format(new_decibel))
-                if (prev_led_max < max_decibel):
-                    prev_led_max = max_decibel
+                if (max_decibel > LED_THRESHOLD):
                     led.led_on()
                 else:
                     led.led_off()
+                sleep(1) # sleep for 1 second before reading next sample
                 #click('update_decibel')
 
 
